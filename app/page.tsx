@@ -97,15 +97,46 @@ export default function Home() {
       setError(null);
       setWines(null);
       
-      // ファイルサイズをチェック（5MB以上の場合リサイズ）
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      // ファイルサイズをチェック（1MB以上の場合リサイズ）
+      const maxSize = 1 * 1024 * 1024; // 1MB
       let fileToUse = file;
       
+      // 1MBを超える場合は必ずリサイズ
       if (file.size > maxSize) {
         try {
-          // 画像をリサイズ（最大1920x1920、品質0.8）
-          fileToUse = await resizeImage(file, 1920, 1920, 0.8);
-          setError(`画像が大きかったため、自動的にリサイズしました（元のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(fileToUse.size / 1024 / 1024).toFixed(2)}MB）`);
+          // 段階的にリサイズして1MB以下にする
+          let currentFile = file;
+          let quality = 0.6;
+          let maxDimension = 1000;
+          
+          // 最大5回リサイズを試みる
+          for (let attempt = 0; attempt < 5 && currentFile.size > maxSize; attempt++) {
+            currentFile = await resizeImage(file, maxDimension, maxDimension, quality);
+            
+            if (currentFile.size > maxSize) {
+              // サイズと品質を下げる
+              maxDimension = Math.max(600, maxDimension - 100);
+              quality = Math.max(0.4, quality - 0.05);
+            } else {
+              break; // 1MB以下になったら終了
+            }
+          }
+          
+          // まだ大きい場合は最後の手段
+          if (currentFile.size > maxSize) {
+            currentFile = await resizeImage(file, 600, 600, 0.4);
+          }
+          
+          fileToUse = currentFile;
+          
+          if (fileToUse.size > maxSize) {
+            setError(`画像が大きすぎます（${(fileToUse.size / 1024 / 1024).toFixed(2)}MB）。別の画像をお試しください。`);
+            return;
+          }
+          
+          if (file.size !== fileToUse.size) {
+            setError(`画像が大きかったため、自動的にリサイズしました（元のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(fileToUse.size / 1024 / 1024).toFixed(2)}MB）`);
+          }
         } catch (resizeError) {
           console.error("画像のリサイズに失敗しました:", resizeError);
           setError("画像のリサイズに失敗しました。別の画像をお試しください。");
@@ -130,12 +161,27 @@ export default function Home() {
       return;
     }
 
+    // アップロード前に再度サイズをチェック
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    let fileToUpload = selectedFile;
+    
+    if (selectedFile.size > maxSize) {
+      try {
+        // 再度リサイズを試みる
+        fileToUpload = await resizeImage(selectedFile, 800, 800, 0.6);
+        setError(`画像をリサイズしてアップロードします（${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB）`);
+      } catch (resizeError) {
+        setError("画像が大きすぎます。別の画像をお試しください。");
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const formData = new FormData();
-      formData.append("image", selectedFile);
+      formData.append("image", fileToUpload);
       formData.append("preferences", JSON.stringify(preferences));
 
       const response = await fetch("/api/analyze", {
