@@ -1,13 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f5;
+  --foreground: #3d2817;
+  --card: #ffffff;
+  --card-foreground: #3d2817;
+  --popover: #ffffff;
+  --popover-foreground: #3d2817;
+  --primary: #8B3A47;
+  --primary-foreground: #ffffff;
+  --secondary: #f5e6d3;
+  --secondary-foreground: #5c3a1f;
+  --muted: #ede4d6;
+  --muted-foreground: #8b7355;
+  --accent: #d4a574;
+  --accent-foreground: #3d2817;
+  --destructive: #c85a5a;
+  --destructive-foreground: #ffffff;
+  --border: #e8ddd0;
+  --input: #f0e8dd;
+  --ring: #8B3A47;
+  --radius: 0.75rem;
+  --wine-gold: #d4a574;
+  --wine-cream: #faf8f5;
+  --wine-burgundy: #6b2c3e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,11 +54,62 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --card: #0a0a0a;
+    --card-foreground: #ededed;
+    --popover: #0a0a0a;
+    --popover-foreground: #ededed;
+    --primary: #722F37;
+    --primary-foreground: #ffffff;
+    --secondary: #1e293b;
+    --secondary-foreground: #f1f5f9;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --accent: #1e293b;
+    --accent-foreground: #f1f5f9;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #722F37;
   }
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #faf8f5 0%, #f5e6d3 50%, #ede4d6 100%);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* ワインらしい装飾的な要素 */
+@keyframes wineShimmer {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.wine-accent {
+  position: relative;
+}
+
+.wine-accent::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #8B3A47, #d4a574, #8B3A47);
+  border-radius: inherit;
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+
+.wine-accent:hover::before {
+  opacity: 0.1;
 }
