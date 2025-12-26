@@ -73,13 +73,35 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.error || "画像の解析に失敗しました";
-        const errorDetails = errorData.details ? ` (詳細: ${errorData.details})` : "";
-        throw new Error(errorMessage + errorDetails);
+        let errorMessage = "画像の解析に失敗しました";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+            const errorDetails = errorData.details ? ` (詳細: ${errorData.details})` : "";
+            throw new Error(errorMessage + errorDetails);
+          } else {
+            const text = await response.text();
+            throw new Error(`${errorMessage} (ステータス: ${response.status})`);
+          }
+        } catch (parseError) {
+          if (parseError instanceof Error) {
+            throw parseError;
+          }
+          throw new Error(`${errorMessage} (ステータス: ${response.status})`);
+        }
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("サーバーからの応答がJSON形式ではありません");
       }
 
       const data = await response.json();
+      if (!data.wines || !Array.isArray(data.wines)) {
+        throw new Error("ワインリストの形式が正しくありません");
+      }
       setWines(data.wines);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "エラーが発生しました";
@@ -102,7 +124,8 @@ export default function Home() {
               <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-2xl blur-xl -z-0"></div>
             </div>
             <p className="text-xl md:text-2xl leading-relaxed text-foreground/80 max-w-xl font-medium">
-              メニュー画像をアップロードするだけで、AIソムリエが最適なワインリストを提案
+              メニュー画像をアップロードするだけで、<br />
+              AIソムリエが最適なワインリストを提案
             </p>
             <div className="w-24 h-1 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full"></div>
           </div>

@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get("image") as File;
-    const preferencesJson = formData.get("preferences") as string | null;
+    const preferencesValue = formData.get("preferences");
     
     let preferences: {
       budget?: string | null;
@@ -71,15 +71,28 @@ export async function POST(request: Request) {
       region?: string | null;
     } = {};
     
-    if (preferencesJson) {
+    if (preferencesValue) {
       try {
         // 文字列であることを確認
-        if (typeof preferencesJson === "string" && preferencesJson.trim() !== "") {
+        let preferencesJson: string;
+        if (typeof preferencesValue === "string") {
+          preferencesJson = preferencesValue;
+        } else if (preferencesValue instanceof File) {
+          // Fileオブジェクトの場合は読み込む
+          preferencesJson = await preferencesValue.text();
+        } else {
+          // その他の場合は文字列に変換を試みる
+          preferencesJson = String(preferencesValue);
+        }
+        
+        if (preferencesJson && preferencesJson.trim() !== "" && preferencesJson !== "null") {
           preferences = JSON.parse(preferencesJson);
         }
       } catch (e) {
-        console.error("Failed to parse preferences:", e, "preferencesJson:", preferencesJson);
-        // パースに失敗しても処理を続行
+        console.error("Failed to parse preferences:", e);
+        console.error("preferencesValue type:", typeof preferencesValue);
+        console.error("preferencesValue:", preferencesValue);
+        // パースに失敗しても処理を続行（デフォルト値を使用）
       }
     }
 
