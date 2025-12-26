@@ -37,19 +37,90 @@ export default function Home() {
     region: null,
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 画像をリサイズする関数
+  const resizeImage = (file: File, maxWidth: number, maxHeight: number, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // アスペクト比を保ちながらリサイズ
+          if (width > height) {
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height;
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  const resizedFile = new File([blob], file.name, {
+                    type: file.type,
+                    lastModified: Date.now(),
+                  });
+                  resolve(resizedFile);
+                } else {
+                  resolve(file);
+                }
+              },
+              file.type,
+              quality
+            );
+          } else {
+            resolve(file);
+          }
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
       setError(null);
       setWines(null);
+      
+      // ファイルサイズをチェック（5MB以上の場合リサイズ）
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      let fileToUse = file;
+      
+      if (file.size > maxSize) {
+        try {
+          // 画像をリサイズ（最大1920x1920、品質0.8）
+          fileToUse = await resizeImage(file, 1920, 1920, 0.8);
+          setError(`画像が大きかったため、自動的にリサイズしました（元のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(fileToUse.size / 1024 / 1024).toFixed(2)}MB）`);
+        } catch (resizeError) {
+          console.error("画像のリサイズに失敗しました:", resizeError);
+          setError("画像のリサイズに失敗しました。別の画像をお試しください。");
+          return;
+        }
+      }
+      
+      setSelectedFile(fileToUse);
       
       // プレビュー画像を作成
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(fileToUse);
     }
   };
 
@@ -74,6 +145,13 @@ export default function Home() {
 
       if (!response.ok) {
         let errorMessage = "画像の解析に失敗しました";
+        
+        // 413エラーの場合は特別なメッセージを表示
+        if (response.status === 413) {
+          errorMessage = "画像ファイルが大きすぎます。5MB以下の画像をアップロードしてください。画像は自動的にリサイズされます。";
+          throw new Error(errorMessage);
+        }
+        
         try {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
