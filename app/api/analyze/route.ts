@@ -71,28 +71,41 @@ export async function POST(request: Request) {
       region?: string | null;
     } = {};
     
+    // preferencesの処理を安全に行う
     if (preferencesValue) {
       try {
         // 文字列であることを確認
-        let preferencesJson: string;
+        let preferencesJson: string | null = null;
+        
         if (typeof preferencesValue === "string") {
           preferencesJson = preferencesValue;
         } else if (preferencesValue instanceof File) {
           // Fileオブジェクトの場合は読み込む
           preferencesJson = await preferencesValue.text();
         } else {
-          // その他の場合は文字列に変換を試みる
-          preferencesJson = String(preferencesValue);
+          // Requestオブジェクトやその他のオブジェクトの場合はスキップ
+          console.warn("preferencesValue is not a string or File, skipping. Type:", typeof preferencesValue);
+          // 無効な値として扱う（処理をスキップ）
         }
         
-        if (preferencesJson && preferencesJson.trim() !== "" && preferencesJson !== "null") {
-          preferences = JSON.parse(preferencesJson);
+        // JSON文字列であることを確認してからパース
+        if (preferencesJson && 
+            typeof preferencesJson === "string" &&
+            preferencesJson.trim() !== "" && 
+            preferencesJson !== "null" &&
+            preferencesJson !== "undefined" &&
+            (preferencesJson.trim().startsWith("{") || preferencesJson.trim().startsWith("["))) {
+          try {
+            preferences = JSON.parse(preferencesJson);
+          } catch (parseError) {
+            console.error("JSON.parse failed for preferences:", parseError);
+            console.error("preferencesJson value:", preferencesJson?.substring(0, 100));
+            // パースに失敗しても処理を続行
+          }
         }
       } catch (e) {
-        console.error("Failed to parse preferences:", e);
-        console.error("preferencesValue type:", typeof preferencesValue);
-        console.error("preferencesValue:", preferencesValue);
-        // パースに失敗しても処理を続行（デフォルト値を使用）
+        console.error("Failed to process preferences:", e);
+        // エラーが発生しても処理を続行（デフォルト値を使用）
       }
     }
 
