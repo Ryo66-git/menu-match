@@ -97,17 +97,17 @@ export default function Home() {
       setError(null);
       setWines(null);
       
-      // ファイルサイズをチェック（1MB以上の場合リサイズ）
-      const maxSize = 1 * 1024 * 1024; // 1MB
+      // ファイルサイズをチェック（5MB以上の場合リサイズ）
+      const maxSize = 5 * 1024 * 1024; // 5MB
       let fileToUse = file;
       
-      // 1MBを超える場合は必ずリサイズ
+      // 5MBを超える場合はリサイズ
       if (file.size > maxSize) {
         try {
-          // 段階的にリサイズして1MB以下にする
+          // 段階的にリサイズして5MB以下にする
           let currentFile = file;
-          let quality = 0.6;
-          let maxDimension = 1000;
+          let quality = 0.8;
+          let maxDimension = 1920;
           
           // 最大5回リサイズを試みる
           for (let attempt = 0; attempt < 5 && currentFile.size > maxSize; attempt++) {
@@ -115,16 +115,16 @@ export default function Home() {
             
             if (currentFile.size > maxSize) {
               // サイズと品質を下げる
-              maxDimension = Math.max(600, maxDimension - 100);
-              quality = Math.max(0.4, quality - 0.05);
+              maxDimension = Math.max(1200, maxDimension - 200);
+              quality = Math.max(0.6, quality - 0.05);
             } else {
-              break; // 1MB以下になったら終了
+              break; // 5MB以下になったら終了
             }
           }
           
           // まだ大きい場合は最後の手段
           if (currentFile.size > maxSize) {
-            currentFile = await resizeImage(file, 600, 600, 0.4);
+            currentFile = await resizeImage(file, 1200, 1200, 0.6);
           }
           
           fileToUse = currentFile;
@@ -162,13 +162,24 @@ export default function Home() {
     }
 
     // アップロード前に再度サイズをチェック
-    const maxSize = 1 * 1024 * 1024; // 1MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     let fileToUpload = selectedFile;
     
     if (selectedFile.size > maxSize) {
       try {
         // 再度リサイズを試みる
-        fileToUpload = await resizeImage(selectedFile, 800, 800, 0.6);
+        fileToUpload = await resizeImage(selectedFile, 1600, 1600, 0.7);
+        
+        // まだ大きい場合はさらにリサイズ
+        if (fileToUpload.size > maxSize) {
+          fileToUpload = await resizeImage(selectedFile, 1200, 1200, 0.6);
+        }
+        
+        if (fileToUpload.size > maxSize) {
+          setError(`画像が大きすぎます（${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB）。別の画像をお試しください。`);
+          return;
+        }
+        
         setError(`画像をリサイズしてアップロードします（${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB）`);
       } catch (resizeError) {
         setError("画像が大きすぎます。別の画像をお試しください。");
@@ -194,7 +205,7 @@ export default function Home() {
         
         // 413エラーの場合は特別なメッセージを表示
         if (response.status === 413) {
-          errorMessage = "画像ファイルが大きすぎます。5MB以下の画像をアップロードしてください。画像は自動的にリサイズされます。";
+          errorMessage = "画像ファイルが大きすぎます。10MB以下の画像をアップロードしてください。画像は自動的にリサイズされます。";
           throw new Error(errorMessage);
         }
         
